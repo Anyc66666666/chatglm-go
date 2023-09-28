@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/solstice-gao/chatglm-go/entity"
+	"github.com/Anyc66666666/chatglm-go/entity"
 )
 
 type ChatService struct {

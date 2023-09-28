@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/solstice-gao/chatglm-go/chat"
+	"github.com/Anyc66666666/chatglm-go/chat"
 )
 
 func main() {
