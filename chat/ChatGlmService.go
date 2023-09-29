@@ -63,6 +63,8 @@ var (
 		"Content-Type":  {"application/json;charset=utf-8"},
 		"Authorization": {""},
 	}
+
+	UnauthorizedError = fmt.Errorf("401 token/cookie 已过期")
 )
 
 func NewChatService(authorization string, cookie string) *ChatService {
@@ -92,6 +94,9 @@ func (s *ChatService) GetChatStream(contextId string) (bufio.Scanner, error) {
 		fmt.Println(err1)
 		return *scanner, err1
 	}
+	if res.StatusCode == http.StatusUnauthorized {
+		return bufio.Scanner{}, UnauthorizedError
+	}
 
 	scanner = bufio.NewScanner(res.Body)
 	return *scanner, nil
@@ -116,6 +121,10 @@ func (s *ChatService) GetChat(contextId string) (string, error) {
 		fmt.Println(err1)
 		return "", err1
 	}
+	if res.StatusCode == http.StatusUnauthorized {
+		return "", UnauthorizedError
+	}
+
 	scanner = bufio.NewScanner(res.Body)
 	var ok bool
 	var answer string
@@ -133,13 +142,13 @@ func (s *ChatService) GetChat(contextId string) (string, error) {
 	return answer, nil
 }
 
-func (s *ChatService) GetTaskId(prompt string) *entity.TaskResponse {
+func (s *ChatService) GetTaskId(prompt string) (*entity.TaskResponse, error) {
 	url := baseUrl + task
 	payload := strings.NewReader(`{"prompt":"` + prompt + `"}`)
 	req, err := http.NewRequest(http.MethodPost, url, payload)
 	if err != nil {
 		fmt.Println(err)
-		return nil
+		return nil, err
 	}
 	req.Header = s.getHeaderByType(taskType)
 	res, err1 := client.Do(req)
@@ -148,25 +157,28 @@ func (s *ChatService) GetTaskId(prompt string) *entity.TaskResponse {
 	}
 	if err1 != nil {
 		fmt.Println(err1)
-		return nil
+		return nil, err
+	}
+	if res.StatusCode == http.StatusUnauthorized {
+		return nil, UnauthorizedError
 	}
 
 	body, err2 := io.ReadAll(res.Body)
 	if err2 != nil {
 		fmt.Println(err2)
-		return nil
+		return nil, err
 	}
 	var response *entity.TaskResponse
 	err = json.Unmarshal(body, &response)
 	if err != nil {
-		fmt.Println(err)
-		return nil
+		fmt.Println(string(body), err)
+		return nil, err
 	}
 
-	return response
+	return response, nil
 }
 
-func (s *ChatService) GetContextId(prompt string, taskid string) *entity.ContextResponse {
+func (s *ChatService) GetContextId(prompt string, taskid string) (*entity.ContextResponse, error) {
 	url := baseUrl + context
 	str := `{"prompt":"` + prompt + `","seed":93549,"max_tokens":512,"conversation_task_id":"` +
 		taskid + `","retry":false,"retry_history_task_id":null}`
@@ -175,7 +187,7 @@ func (s *ChatService) GetContextId(prompt string, taskid string) *entity.Context
 
 	if err != nil {
 		fmt.Println(err)
-		return nil
+		return nil, err
 	}
 
 	req.Header = s.getHeaderByType(contextType)
@@ -186,22 +198,25 @@ func (s *ChatService) GetContextId(prompt string, taskid string) *entity.Context
 	}
 	if err1 != nil {
 		fmt.Println(err1)
-		return nil
+		return nil, err
+	}
+	if res.StatusCode == http.StatusUnauthorized {
+		return nil, UnauthorizedError
 	}
 
 	body, err2 := io.ReadAll(res.Body)
 	if err2 != nil {
 		fmt.Println(err2)
-		return nil
+		return nil, err
 	}
 	var response *entity.ContextResponse
 	err = json.Unmarshal(body, &response)
 	if err != nil {
-		fmt.Println(err)
-		return nil
+		fmt.Println(string(body), err)
+		return nil, err
 	}
 
-	return response
+	return response, nil
 }
 
 func (s *ChatService) getHeaderByType(tpe tpe) map[string][]string {

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/Anyc66666666/chatglm-go/chat"
 )
@@ -16,14 +17,21 @@ func main() {
 	chatService := chat.NewChatService(authorization, cookie)
 
 	// 获取任务ID
-	task := chatService.GetTaskId(prompt)
+	task, err := chatService.GetTaskId(prompt)
+	if err != nil {
+		log.Println(err)
+		return
+	}
 	fmt.Println("task id-------")
 	fmt.Println(task.Result.TaskID)
 	fmt.Println("-------")
 
 	// 获取上下文ID
-	context := chatService.GetContextId(prompt, task.Result.TaskID)
-
+	context, err1 := chatService.GetContextId(prompt, task.Result.TaskID)
+	if err1 != nil {
+		log.Println(err1)
+		return
+	}
 	fmt.Println("context id-------")
 	fmt.Println(context.Result.ContextID)
 	fmt.Println("-------")
