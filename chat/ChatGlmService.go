@@ -27,9 +27,11 @@ const (
 	context = "/stream_context"
 	refresh = "/user/refresh"
 
-	cookie        = "cookie"
-	Authorization = "Authorization"
-	accept        = "accept"
+	cookie          = "cookie"
+	refreshTokenKey = "chatglm_refresh_token"
+	accessTokenKey  = "chatglm_token"
+	Authorization   = "Authorization"
+	accept          = "accept"
 
 	chatType    tpe = "chat"
 	taskType    tpe = "task"
@@ -235,20 +237,23 @@ func (s *ChatService) getHeaderByType(tpe tpe) map[string][]string {
 		header[Authorization][0] = s.authorization
 	case refreshType:
 		header = headerAuth
-		header[Authorization][0] = s.authorization
+		header[Authorization][0] = "Bearer " + s.getRefreshToken()
 	default:
 
 	}
 	return header
 }
 
-// RefreshToken get new token and update auth
-func (s *ChatService) RefreshToken() (string, error) {
+// RefreshTokenAndCookie get new token,cookie and update auth,cookie
+// 1. get refreshToken from cookie
+// 2. get new token by refreshToken
+// 3. update auth and cookie
+func (s *ChatService) RefreshTokenAndCookie() (tk string, ck string, er error) {
 	url := baseUrl + refresh
 	req, err := http.NewRequest(http.MethodPost, url, nil)
 	if err != nil {
 		fmt.Println(err)
-		return "", err
+		return "", "", err
 	}
 
 	req.Header = s.getHeaderByType(refreshType)
@@ -258,28 +263,53 @@ func (s *ChatService) RefreshToken() (string, error) {
 	}
 	if err1 != nil {
 		fmt.Println(err1)
-		return "", err1
+		return "", "", err1
 	}
 	if res.StatusCode == http.StatusUnauthorized {
-		return "", UnauthorizedError
+		return "", "", UnauthorizedError
 	}
 
 	body, err2 := io.ReadAll(res.Body)
 	if err2 != nil {
 		fmt.Println(err2)
-		return "", err
+		return "", "", err
 	}
 	var response *entity.RefreshResponse
 	err = json.Unmarshal(body, &response)
 	if err != nil {
 		fmt.Println(string(body), err)
-		return "", err
+		return "", "", err
 	}
-	token := response.Result.AccessToken
-	s.updateAuth(token)
-	return token, nil
+	tk = response.Result.AccessToken
+	ck = s.getNewCookie(tk)
+	s.updateChatService(tk, ck)
+	return tk, ck, nil
 }
 
-func (s *ChatService) updateAuth(token string) {
+func (s *ChatService) updateChatService(token, ck string) {
 	s.authorization = "Bearer " + token
+	s.cookie = ck
+}
+func (s *ChatService) getCookieVal(cookieKey string) string {
+	key := cookieKey + "="
+	str := strings.Split(s.cookie, ";")
+	var val string
+	for _, v := range str {
+		if strings.Contains(v, key) {
+			kv := strings.Split(v, "=")
+			if len(kv) != 2 {
+				break
+			}
+			val = kv[1]
+			break
+		}
+	}
+	return val
+}
+func (s *ChatService) getRefreshToken() string {
+	return s.getCookieVal(refreshTokenKey)
+}
+func (s *ChatService) getNewCookie(newToken string) (newCookie string) {
+	oldToken := s.getCookieVal(accessTokenKey)
+	return strings.ReplaceAll(s.cookie, oldToken, newToken)
 }

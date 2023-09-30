@@ -23,7 +23,7 @@ func main() {
 			log.Println(err)
 			return
 		}
-		if _, err = chatService.RefreshToken(); err != nil {
+		if _, _, err = chatService.RefreshTokenAndCookie(); err != nil {
 			return
 		}
 	}
