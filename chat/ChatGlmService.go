@@ -281,5 +281,5 @@ func (s *ChatService) RefreshToken() (string, error) {
 }
 
 func (s *ChatService) updateAuth(token string) {
-	s.authorization = token
+	s.authorization = "Bearer " + token
 }
