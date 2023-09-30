@@ -15,10 +15,12 @@ ChatGLM Go SDK 是一个将网页版 ChatGLM 转换为 Go 语言的软件开发�
 
 ## 安装
 
-使用 Go 的包管理工具 `go get` 可以快速获取并安装 ChatGLM Go SDK：
+使用 Go 的包管理工具可以快速获取并安装 ChatGLM Go SDK：
 
 ```
-go get github.com/solstice-gao/chatglm-go
+import "github.com/Anyc66666666/chatglm-go/chat"
+
+go mod tidy
 ```
 
 ## 使用示例
