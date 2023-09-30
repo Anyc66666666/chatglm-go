@@ -25,6 +25,7 @@ const (
 	chat    = "/stream?context_id="
 	task    = "/conversation"
 	context = "/stream_context"
+	refresh = "/user/refresh"
 
 	cookie        = "cookie"
 	Authorization = "Authorization"
@@ -33,6 +34,7 @@ const (
 	chatType    tpe = "chat"
 	taskType    tpe = "task"
 	contextType tpe = "context"
+	refreshType tpe = "refresh"
 
 	streamAccept = "text/event-stream"
 	jsonAccept   = "application/json, text/plain, */*"
@@ -157,7 +159,7 @@ func (s *ChatService) GetTaskId(prompt string) (*entity.TaskResponse, error) {
 	}
 	if err1 != nil {
 		fmt.Println(err1)
-		return nil, err
+		return nil, err1
 	}
 	if res.StatusCode == http.StatusUnauthorized {
 		return nil, UnauthorizedError
@@ -166,7 +168,7 @@ func (s *ChatService) GetTaskId(prompt string) (*entity.TaskResponse, error) {
 	body, err2 := io.ReadAll(res.Body)
 	if err2 != nil {
 		fmt.Println(err2)
-		return nil, err
+		return nil, err2
 	}
 	var response *entity.TaskResponse
 	err = json.Unmarshal(body, &response)
@@ -198,7 +200,7 @@ func (s *ChatService) GetContextId(prompt string, taskid string) (*entity.Contex
 	}
 	if err1 != nil {
 		fmt.Println(err1)
-		return nil, err
+		return nil, err1
 	}
 	if res.StatusCode == http.StatusUnauthorized {
 		return nil, UnauthorizedError
@@ -207,7 +209,7 @@ func (s *ChatService) GetContextId(prompt string, taskid string) (*entity.Contex
 	body, err2 := io.ReadAll(res.Body)
 	if err2 != nil {
 		fmt.Println(err2)
-		return nil, err
+		return nil, err2
 	}
 	var response *entity.ContextResponse
 	err = json.Unmarshal(body, &response)
@@ -231,8 +233,55 @@ func (s *ChatService) getHeaderByType(tpe tpe) map[string][]string {
 	case contextType:
 		header = headerAuth
 		header[Authorization][0] = s.authorization
+	case refreshType:
+		header = headerAuth
+		header[Authorization][0] = s.authorization
 	default:
 
 	}
 	return header
+}
+
+// RefreshToken get new token and update auth
+func (s *ChatService) RefreshToken() (string, error) {
+	url := baseUrl + refresh
+	req, err := http.NewRequest(http.MethodPost, url, nil)
+	if err != nil {
+		fmt.Println(err)
+		return "", err
+	}
+
+	req.Header = s.getHeaderByType(refreshType)
+	res, err1 := client.Do(req)
+	if res != nil {
+		defer res.Body.Close()
+	}
+	if err1 != nil {
+		fmt.Println(err1)
+		return "", err1
+	}
+	if res.StatusCode == http.StatusUnauthorized {
+		return "", UnauthorizedError
+	}
+
+	res.Cookies()
+
+	body, err2 := io.ReadAll(res.Body)
+	if err2 != nil {
+		fmt.Println(err2)
+		return "", err
+	}
+	var response *entity.RefreshResponse
+	err = json.Unmarshal(body, &response)
+	if err != nil {
+		fmt.Println(string(body), err)
+		return "", err
+	}
+	token := response.Result.AccessToken
+	s.updateAuth(token)
+	return token, nil
+}
+
+func (s *ChatService) updateAuth(token string) {
+	s.authorization = token
 }

@@ -19,8 +19,13 @@ func main() {
 	// 获取任务ID
 	task, err := chatService.GetTaskId(prompt)
 	if err != nil {
-		log.Println(err)
-		return
+		if err != chat.UnauthorizedError {
+			log.Println(err)
+			return
+		}
+		if _, err = chatService.RefreshToken(); err != nil {
+			return
+		}
 	}
 	fmt.Println("task id-------")
 	fmt.Println(task.Result.TaskID)
