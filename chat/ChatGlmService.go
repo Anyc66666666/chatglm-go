@@ -264,8 +264,6 @@ func (s *ChatService) RefreshToken() (string, error) {
 		return "", UnauthorizedError
 	}
 
-	res.Cookies()
-
 	body, err2 := io.ReadAll(res.Body)
 	if err2 != nil {
 		fmt.Println(err2)
